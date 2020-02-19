@@ -1,5 +1,5 @@
 {
-  "name": "portfolios-server",
+  "name": "mongo-auth-serverf",
   "version": "1.0.0",
   "main": "app.js",
   "author": "Jeremy Crichton",
