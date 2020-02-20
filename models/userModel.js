@@ -48,6 +48,15 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
+// Create an instance method to be available on all documents in this collection
+// - return true if passwords match
+userSchema.methods.correctPassword = async function(
+  candidatePassword,
+  userPassword
+) {
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
