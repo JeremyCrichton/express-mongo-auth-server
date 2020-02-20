@@ -48,7 +48,7 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-// Create an instance method to be available on all documents in this collection
+// Create an instance method to be available on all documents in this User collection
 // - return true if passwords match
 userSchema.methods.correctPassword = async function(
   candidatePassword,
