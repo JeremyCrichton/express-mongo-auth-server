@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
 const User = require('../models/userModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
@@ -9,13 +10,24 @@ const signToken = id => {
   });
 };
 
+/**
+ * SIGNUP A NEW USER
+ */
 exports.signup = catchAsync(async (req, res, next) => {
-  const { name, email, password, passwordConfirm } = req.body;
+  const {
+    name,
+    email,
+    password,
+    passwordConfirm,
+    passwordChangedAt
+  } = req.body;
+  // @TODO: Remove passwordChangedAt after implementing change pw functionality
   const newUser = await User.create({
     name,
     email,
     password,
-    passwordConfirm
+    passwordConfirm,
+    passwordChangedAt
   });
   const token = signToken(newUser._id);
 
@@ -28,6 +40,9 @@ exports.signup = catchAsync(async (req, res, next) => {
   });
 });
 
+/**
+ * LOG IN AN EXISTING USER
+ */
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -52,4 +67,47 @@ exports.login = catchAsync(async (req, res, next) => {
     status: 'success',
     token
   });
+});
+
+/**
+ * LIMIT ROUTE ACCESS TO LOGGED IN USERS
+ */
+
+exports.protect = catchAsync(async (req, res, next) => {
+  // 1. Get token from the request header, return an error if no Authorization header
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next(new AppError('You are not logged in. Please log in.', 401));
+  }
+
+  // 2. Decode JWT
+  // - jwt.verify will return a "JsonWebTokenError" if the token is invalid
+  const decodedToken = await promisify(jwt.verify)(
+    token,
+    process.env.JWT_SECRET
+  );
+
+  // 3. If JWT IS valid, check if related User still exists and if not, send back an error
+  const currentUser = await User.findById(decodedToken.id);
+
+  if (!currentUser) {
+    return next(new AppError('User does not exist.', 401));
+  }
+
+  // 4. Check if user changed password after token was issued via an instance method on the User model
+  if (currentUser.changedPasswordAfterTokenIssued(decodedToken)) {
+    return next(
+      new AppError('Password has been changed subsequent to this token', 401)
+    );
+  }
+
+  next();
 });

@@ -32,7 +32,8 @@ const userSchema = new mongoose.Schema({
       },
       message: 'Pleae make sure your passwords match.'
     }
-  }
+  },
+  passwordChangedAt: Date
 });
 
 // pre runs between getting the data and saving to the db
@@ -48,13 +49,27 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-// Create an instance method to be available on all documents in this User collection
-// - return true if passwords match
+/**
+ * INSTANCE METHODS (available on all documets in the User collection)
+ */
+
+// Return true if passwords match
 userSchema.methods.correctPassword = async function(
   candidatePassword,
   userPassword
 ) {
   return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+// Return true if User pw has been changed subsequent to passed in JWT, otherwise return false
+userSchema.methods.changedPasswordAfterTokenIssued = function(token) {
+  if (this.passwordChangedAt) {
+    const passwordChangedAtTimestamp = this.passwordChangedAt.getTime() / 1000;
+
+    return token.iat < passwordChangedAtTimestamp;
+  }
+
+  return false;
 };
 
 const User = mongoose.model('User', userSchema);
