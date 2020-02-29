@@ -17,6 +17,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   const {
     name,
     email,
+    role,
     password,
     passwordConfirm,
     passwordChangedAt
@@ -25,6 +26,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name,
     email,
+    role,
     password,
     passwordConfirm,
     passwordChangedAt
@@ -72,7 +74,6 @@ exports.login = catchAsync(async (req, res, next) => {
 /**
  * LIMIT ROUTE ACCESS TO LOGGED IN USERS
  */
-
 exports.protect = catchAsync(async (req, res, next) => {
   // 1. Get token from the request header, return an error if no Authorization header
   let token;
@@ -109,5 +110,24 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
+  // Add user data to the req object
+  req.user = currentUser;
+
+  // Grant access to protected route
   next();
 });
+
+/**
+ * LIMIT ROUTE ACCESS TO CERTAIN USER ROLES
+ */
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new AppError('You do not have permission to perform this action', 403)
+      );
+    }
+
+    next();
+  };
+};
