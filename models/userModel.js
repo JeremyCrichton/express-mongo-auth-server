@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -38,10 +39,14 @@ const userSchema = new mongoose.Schema({
       message: 'Pleae make sure your passwords match.'
     }
   },
-  passwordChangedAt: Date
+  passwordChangedAt: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date
 });
 
-// pre runs between getting the data and saving to the db
+/**
+ * Middlewares - run between getting the data and saving to the db
+ */
 userSchema.pre('save', async function(next) {
   // Only run if pw was modified
   if (!this.isModified('password')) return next();
@@ -73,8 +78,25 @@ userSchema.methods.changedPasswordAfterTokenIssued = function(token) {
 
     return token.iat < passwordChangedAtTimestamp;
   }
-
   return false;
+};
+
+// Generate a random token for password reset
+userSchema.methods.createPasswordResetToken = function() {
+  // Generate a 32 byte cryptographically strong psuedo-random token
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  // Modify document with encrypted password reset token
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  // Modify document with expiry date 10 minutes from when token created
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  // Return plaintext reset token
+  return resetToken;
 };
 
 const User = mongoose.model('User', userSchema);
