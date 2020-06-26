@@ -5,7 +5,7 @@ const {
   protect,
   restrictTo,
   forgotPassword,
-  resetPassword
+  resetPassword,
 } = require('../controllers/authController');
 const { getAllUsers } = require('../controllers/userController');
 
@@ -16,6 +16,7 @@ router.post('/login', login);
 router.post('/forgotPassword', forgotPassword);
 router.patch('/resetPassword/:token', resetPassword);
 
-router.route('/').get(protect, restrictTo('admin'), getAllUsers);
+// router.route('/').get(protect, restrictTo('admin'), getAllUsers);
+router.route('/').get(getAllUsers);
 
 module.exports = router;
